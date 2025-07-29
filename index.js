@@ -30,30 +30,30 @@ app.get('/', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-  const { username, email, password, imie, nazwisko } = req.body;
+  const { username, email, password, name, surname } = req.body;
 
-  if (!username || !email || !password || !imie || !nazwisko) {
-    return res.status(400).send('Brakuje wymaganych pól');
+  if (!username || !email || !password || !name || !surname) {
+    return res.status(400).send('Required field not provided');
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const query = `
-      INSERT INTO users (username, password, email, permissions, imie, nazwisko)
+      INSERT INTO users (username, password, email, permissions, name, surname)
       VALUES (?, ?, ?, 5, ?, ?)
     `;
 
-    connection.query(query, [username, hashedPassword, email, imie, nazwisko], (err, result) => {
+    connection.query(query, [username, hashedPassword, email, name, surname], (err, result) => {
       if (err) {
-        console.error('Błąd MySQL:', err);
-        return res.status(500).send('Błąd rejestracji użytkownika');
+        console.error('MySQL error:', err);
+        return res.status(500).send('Registration failed');
       }
-      res.status(201).send('Użytkownik zarejestrowany');
+      res.status(201).send('User registered');
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Błąd serwera');
+    res.status(500).send('Server error');
   }
 });
 
@@ -62,17 +62,17 @@ app.post('/login', (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).send('Brakuje nazwy użytkownika lub hasła');
+    return res.status(400).send('No username or password');
   }
 
   const findUserQuery = 'SELECT * FROM users WHERE username = ? LIMIT 1';
   connection.query(findUserQuery, [username], (err, results) => {
     if (err) {
       console.error(err);
-      return res.status(500).send('Błąd serwera');
+      return res.status(500).send('Server error');
     }
     if (results.length === 0) {
-      return res.status(401).send('Nieprawidłowa nazwa użytkownika lub hasło');
+      return res.status(401).send('Incorrect username or password');
     }
 
     const user = results[0];
@@ -80,20 +80,20 @@ app.post('/login', (req, res) => {
     bcrypt.compare(password, user.password, (err, isMatch) => {
       if (err) {
         console.error(err);
-        return res.status(500).send('Błąd serwera');
+        return res.status(500).send('Server error');
       }
       if (!isMatch) {
-        return res.status(401).send('Nieprawidłowa nazwa użytkownika lub hasło');
+        return res.status(401).send('Incorrect username or password');
       }
 
       const updateLoginQuery = 'UPDATE users SET last_login = NOW() WHERE username = ?';
       connection.query(updateLoginQuery, [username], (err) => {
         if (err) {
           console.error(err);
-          return res.status(500).send('Błąd aktualizacji logowania');
+          return res.status(500).send('Login update error');
         }
 
-        res.send('Zalogowano pomyślnie');
+        res.send('Logged in successfully');
       });
     });
   });
