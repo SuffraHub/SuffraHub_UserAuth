@@ -39,25 +39,42 @@ app.post('/register', async (req, res) => {
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const query = `
-      INSERT INTO users (username, password, email, permissions, name, surname)
-      VALUES (?, ?, ?, 5, ?, ?)
-    `;
-
-    connection.query(query, [username, hashedPassword, email, name, surname], (err, result) => {
+    // Check if username already exists
+    const checkQuery = `SELECT COUNT(*) AS count FROM users WHERE username = ?`;
+    connection.query(checkQuery, [username], async (err, results) => {
       if (err) {
-        console.error('MySQL error:', err);
-        return res.status(500).json({ message: 'Registration failed'});
+        console.error('MySQL error during username check:', err);
+        return res.status(500).json({ message: 'Database error during username check' });
       }
-      return res.status(201).json({ message: 'User registered'});
+
+      if (results[0].count > 0) {
+        return res.status(409).json({ message: 'User with this username already exists' });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const insertQuery = `
+        INSERT INTO users (username, password, email, permissions, name, surname)
+        VALUES (?, ?, ?, 5, ?, ?)
+      `;
+
+      connection.query(insertQuery, [username, hashedPassword, email, name, surname], (err, result) => {
+        if (err) {
+          console.error('MySQL error during insert:', err);
+          return res.status(500).json({ message: 'Registration failed' });
+        }
+
+        return res.status(201).json({ message: 'User registered' });
+      });
     });
+
   } catch (err) {
-      console.error(err);
-      return res.status(500).json({ message: 'Server error'});
+    console.error('Unexpected error:', err);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 
 app.post('/login', (req, res) => {
