@@ -1,12 +1,14 @@
 const express = require('express');
 const app = express();
 const port = 8000;
+const cors = require('cors');
 
 require('dotenv').config();
 const mysql = require('mysql');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+app.use(cors());
 app.use(express.json());
 
 const connection = mysql.createConnection({
@@ -26,14 +28,14 @@ connection.connect(err => {
 
 
 app.get('/', (req, res) => {
-  res.send('main');
+  res.json({ message: 'main'});
 });
 
 app.post('/register', async (req, res) => {
   const { username, email, password, name, surname } = req.body;
 
   if (!username || !email || !password || !name || !surname) {
-    return res.status(400).send('Required field not provided');
+    return res.status(400).json({ message: 'Required field not provided' });
   }
 
   try {
@@ -47,13 +49,13 @@ app.post('/register', async (req, res) => {
     connection.query(query, [username, hashedPassword, email, name, surname], (err, result) => {
       if (err) {
         console.error('MySQL error:', err);
-        return res.status(500).send('Registration failed');
+        return res.status(500).json({ message: 'Registration failed'});
       }
-      res.status(201).send('User registered');
+      return res.status(201).json({ message: 'User registered'});
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+      console.error(err);
+      return res.status(500).json({ message: 'Server error'});
   }
 });
 
@@ -62,17 +64,17 @@ app.post('/login', (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).send('No username or password');
+    return res.status(400).json({ message: 'No username or password'});
   }
 
   const findUserQuery = 'SELECT * FROM users WHERE username = ? LIMIT 1';
   connection.query(findUserQuery, [username], (err, results) => {
     if (err) {
       console.error(err);
-      return res.status(500).send('Server error');
+      return res.status(500).json({ message: 'Server error'});
     }
     if (results.length === 0) {
-      return res.status(401).send('Incorrect username or password');
+      return res.status(401).json({ message: 'Incorrect username or password'});
     }
 
     const user = results[0];
@@ -80,17 +82,17 @@ app.post('/login', (req, res) => {
     bcrypt.compare(password, user.password, (err, isMatch) => {
       if (err) {
         console.error(err);
-        return res.status(500).send('Server error');
+        return res.status(500).json({ message: 'Server error'});
       }
       if (!isMatch) {
-        return res.status(401).send('Incorrect username or password');
+        return res.status(401).json({ message: 'Incorrect username or password'});
       }
 
       const updateLoginQuery = 'UPDATE users SET last_login = NOW() WHERE username = ?';
       connection.query(updateLoginQuery, [username], (err) => {
         if (err) {
           console.error(err);
-          return res.status(500).send('Login update error');
+          return res.status(500).json({ message: 'Login update error'});
         }
 
         res.send('Logged in successfully');
