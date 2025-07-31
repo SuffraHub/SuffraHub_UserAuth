@@ -30,7 +30,7 @@ connection.connect(err => {
 app.get('/', (req, res) => {
   res.json({ message: 'main'});
 });
-
+ 
 app.post('/register', async (req, res) => {
   const { username, email, password, name, surname } = req.body;
 
