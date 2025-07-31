@@ -111,8 +111,7 @@ app.post('/login', (req, res) => {
           console.error(err);
           return res.status(500).json({ message: 'Login update error'});
         }
-
-        res.send('Logged in successfully');
+        res.json({ message: 'Logged in successfully'});
       });
     });
   });
