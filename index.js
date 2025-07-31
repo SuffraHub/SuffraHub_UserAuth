@@ -118,6 +118,27 @@ app.post('/login', (req, res) => {
   });
 });
 
+app.post('/delete', (req, res) => {
+  const { username } = req.body;
+
+  if (!username) {
+    return res.status(400).send('Missing username');
+  }
+
+  const deleteUserQuery = 'DELETE FROM users WHERE username = ?';
+  connection.query(deleteUserQuery, [username], (err, result) => {
+    if (err) {
+      console.error('Błąd MySQL:', err);
+      return res.status(500).send('User deletion error');
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send('User not found');
+    }
+
+    res.send('User deleted successfully');
+  });
+});
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);
