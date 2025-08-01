@@ -179,7 +179,7 @@ app.post('/editUser', async (req, res) => {
 });
 
 
-app.post('/delete', (req, res) => {
+app.delete('/delete', (req, res) => {
   const { username } = req.body;
 
   if (!username) {
