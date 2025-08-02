@@ -109,6 +109,8 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// TODO REGISTER TO TENANT!!!
+
 app.post('/login', (req, res) => {
   const { username, password, remember } = req.body;
   const userAgent = req.headers['user-agent'];
