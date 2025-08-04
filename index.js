@@ -189,7 +189,7 @@ app.get('/user-info', authenticateToken, (req, res) => {
   }
 
   connection.query(
-    'SELECT company_id, permissions FROM users WHERE id = ?',
+    'SELECT company_id, permissions, username FROM users WHERE id = ?',
     [userId],
     (err, results) => {
       if (err) {
@@ -201,13 +201,13 @@ app.get('/user-info', authenticateToken, (req, res) => {
         return res.status(404).json({ loggedIn: false, error: 'User not found' });
       }
 
-      const { company_id, permissions } = results[0];
+      const { company_id, permissions, username } = results[0];
 
       res.json({
         loggedIn: true,
         method: req.session && req.session.user_id ? 'session' : 'token',
         user_id: userId,
-        username: req.jwtUser ? req.jwtUser.username : null,
+        username: username,
         company_id,
         permissions: Number(permissions),
       });
