@@ -110,6 +110,60 @@ app.post('/register', async (req, res) => {
 });
 
 // TODO REGISTER TO TENANT!!!
+app.post('/register-to-tenant', async (req, res) => {
+  const { username, email, password, name, surname, permissions, confirmEmail, confirmPassword } = req.body;
+
+  if (!username || !email || !confirmEmail || !password || !confirmPassword || !name || !surname || !permissions) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  if (email !== confirmEmail) {
+    return res.status(400).json({ message: 'Emails do not match' });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match' });
+  }
+
+  // Get current user (who is logged in) to extract company_id
+  const userId = req.session.user_id;
+
+  if (!userId) return res.status(401).json({ message: 'Not authenticated' });
+
+  // Get current user's company_id
+  connection.query('SELECT company_id FROM users WHERE id = ?', [userId], async (err, results) => {
+    if (err || results.length === 0) return res.status(500).json({ message: 'Error getting tenant ID' });
+
+    const company_id = results[0].company_id;
+
+    if (!company_id || company_id === 0) {
+      return res.status(400).json({ message: 'You are not assigned to any tenant' });
+    }
+
+    const checkQuery = `SELECT COUNT(*) AS count FROM users WHERE username = ?`;
+    connection.query(checkQuery, [username], async (err, results) => {
+      if (err) return res.status(500).json({ message: 'Database error' });
+
+      if (results[0].count > 0) {
+        return res.status(409).json({ message: 'User with this username already exists' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const insertQuery = `
+        INSERT INTO users (username, password, email, permissions, name, surname, company_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `;
+      const values = [username, hashedPassword, email, permissions, name, surname, company_id];
+
+      connection.query(insertQuery, values, (err) => {
+        if (err) return res.status(500).json({ message: 'Registration failed' });
+        return res.status(201).json({ message: 'User registered to tenant' });
+      });
+    });
+  });
+});
+
+
 
 app.post('/login', (req, res) => {
   const { username, password, remember } = req.body;
@@ -189,7 +243,7 @@ app.get('/user-info', authenticateToken, (req, res) => {
   }
 
   connection.query(
-    'SELECT company_id, permissions, username FROM users WHERE id = ?',
+    'SELECT company_id, users.permissions, username, permissions_dictionary.description AS permissions_desc FROM users JOIN permissions_dictionary ON permissions_dictionary.permissions = users.permissions WHERE users.id = ?',
     [userId],
     (err, results) => {
       if (err) {
@@ -201,7 +255,7 @@ app.get('/user-info', authenticateToken, (req, res) => {
         return res.status(404).json({ loggedIn: false, error: 'User not found' });
       }
 
-      const { company_id, permissions, username } = results[0];
+      const { company_id, permissions, username, permissions_desc } = results[0];
 
       res.json({
         loggedIn: true,
@@ -210,6 +264,7 @@ app.get('/user-info', authenticateToken, (req, res) => {
         username: username,
         company_id,
         permissions: Number(permissions),
+        permissions_desc
       });
     }
   );
