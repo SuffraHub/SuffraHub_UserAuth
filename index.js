@@ -243,7 +243,7 @@ app.get('/user-info', authenticateToken, (req, res) => {
   }
 
   connection.query(
-    'SELECT company_id, users.permissions, username, permissions_dictionary.description AS permissions_desc FROM users JOIN permissions_dictionary ON permissions_dictionary.permissions = users.permissions WHERE users.id = ?',
+    'SELECT company_id, users.permissions, username, name, surname, email, permissions_dictionary.description AS permissions_desc FROM users JOIN permissions_dictionary ON permissions_dictionary.permissions = users.permissions WHERE users.id = ?',
     [userId],
     (err, results) => {
       if (err) {
@@ -255,13 +255,16 @@ app.get('/user-info', authenticateToken, (req, res) => {
         return res.status(404).json({ loggedIn: false, error: 'User not found' });
       }
 
-      const { company_id, permissions, username, permissions_desc } = results[0];
+      const { company_id, permissions, username, name, surname, email, permissions_desc } = results[0];
 
       res.json({
         loggedIn: true,
         method: req.session && req.session.user_id ? 'session' : 'token',
         user_id: userId,
         username: username,
+        name,
+        surname,
+        email,
         company_id,
         permissions: Number(permissions),
         permissions_desc
@@ -277,9 +280,25 @@ app.get('/user-info', authenticateToken, (req, res) => {
 app.post('/editUser', async (req, res) => {
   const { userId, username, email, password, name, surname } = req.body;
 
-  if (!userId || !username || !email || !name || !surname) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
+  const requiredFields = {
+  userId,
+  username,
+  email,
+  name,
+  surname,
+};
+
+const missingFields = Object.entries(requiredFields)
+  .filter(([_, value]) => !value || value.toString().trim() === '')
+  .map(([key]) => key);
+
+if (missingFields.length > 0) {
+  return res.status(400).json({
+    message: 'Missing required fields',
+    missingFields,
+  });
+}
+
 
   try {
     const checkQuery = `SELECT * FROM users WHERE id = ?`;
