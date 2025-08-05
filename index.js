@@ -402,5 +402,5 @@ app.post('/logout', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`App listening on port ${port}`);
+  console.log(`User Auth API listening on port ${port}`);
 });
